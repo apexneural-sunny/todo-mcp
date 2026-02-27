@@ -380,6 +380,12 @@ if __name__ == "__main__":
         # Build the Starlette app and attach the middleware
         app = mcp.streamable_http_app()
         app.add_middleware(AcceptHeaderMiddleware)
-        uvicorn.run(app, host=args.host, port=args.port)
+        uvicorn.run(
+            app,
+            host=args.host,
+            port=args.port,
+            forwarded_allow_ips="*",   # Trust proxy, fixes "Invalid Host header"
+            proxy_headers=True,
+        )
     else:
         mcp.run()
