@@ -99,6 +99,27 @@ class ListTodosInput(BaseModel):
 mcp = FastMCP("todo_mcp")
 
 
+# ──────────────────────────────────────────────
+# Middleware: Fix Accept headers for n8n clients
+# n8n doesn't send the required Accept header that
+# MCP Streamable HTTP needs: "application/json, text/event-stream"
+# ──────────────────────────────────────────────
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
+
+
+class AcceptHeaderMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        accept = request.headers.get("accept", "")
+        if "application/json" not in accept or "text/event-stream" not in accept:
+            headers = dict(request.headers)
+            headers["accept"] = "application/json, text/event-stream"
+            request.scope["headers"] = [
+                (k.lower().encode(), v.encode()) for k, v in headers.items()
+            ]
+        return await call_next(request)
+
+
 @mcp.custom_route("/", methods=["GET"])
 async def root(request):
     """Root endpoint showing server information."""
@@ -351,14 +372,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MCP Todo List Server")
     parser.add_argument("--transport", default="streamable_http", choices=["stdio", "streamable_http"])
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=8090)
     args = parser.parse_args()
 
     if args.transport == "streamable_http":
         print(f"🚀  MCP Todo server running on http://{args.host}:{args.port}/mcp")
-        try:
-            mcp.run(transport="streamable-http", host=args.host, port=args.port)
-        except TypeError:
-            uvicorn.run(mcp.streamable_http_app, host=args.host, port=args.port)
+        # Build the Starlette app and attach the middleware
+        app = mcp.streamable_http_app()
+        app.add_middleware(AcceptHeaderMiddleware)
+        uvicorn.run(app, host=args.host, port=args.port)
     else:
         mcp.run()
