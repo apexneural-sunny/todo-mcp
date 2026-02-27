@@ -356,6 +356,9 @@ if __name__ == "__main__":
 
     if args.transport == "streamable_http":
         print(f"🚀  MCP Todo server running on http://{args.host}:{args.port}/mcp")
-        uvicorn.run(mcp.streamable_http_app, host=args.host, port=args.port)
+        try:
+            mcp.run(transport="streamable-http", host=args.host, port=args.port)
+        except TypeError:
+            uvicorn.run(mcp.streamable_http_app, host=args.host, port=args.port)
     else:
         mcp.run()
