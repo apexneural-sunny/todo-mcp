@@ -96,7 +96,24 @@ class ListTodosInput(BaseModel):
 # ──────────────────────────────────────────────
 # MCP Server
 # ──────────────────────────────────────────────
-mcp = FastMCP("todo_mcp")
+from mcp.server.transport_security import TransportSecuritySettings
+
+mcp = FastMCP(
+    "todo_mcp",
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            "mcptodo.apexneural.cloud",
+            "localhost",
+            "localhost:8090",
+            "127.0.0.1",
+            "127.0.0.1:8090",
+        ],
+        allowed_origins=[
+            "https://mcptodo.apexneural.cloud",
+        ],
+    ),
+)
 
 
 # ──────────────────────────────────────────────
